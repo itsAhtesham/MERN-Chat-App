@@ -1,12 +1,15 @@
 import React from "react";
 import AppLayout from "../components/layout/AppLayout";
-import { Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+import { grayColor } from "../constants/color";
 
 function Home() {
   return (
-    <Typography p={"2rem"} variant="h5" textAlign={"center"}>
-      Select a Friend to chat
-    </Typography>
+    <Box bgcolor={grayColor} height={"100%"}>
+      <Typography p={"2rem"} variant="h5" textAlign={"center"}>
+        Select a Friend to chat
+      </Typography>
+    </Box>
   );
 }
 
