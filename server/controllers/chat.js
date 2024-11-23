@@ -2,10 +2,15 @@ import { User } from "../models/user.js";
 import { Chat } from "../models/chat.js";
 import { TryCatch } from "../middlewares/error.js";
 import { ErrorHandler } from "../utils/utility.js";
-import { deleteFilesFromCloudinary, emitEvent } from "../utils/features.js";
+import {
+  deleteFilesFromCloudinary,
+  emitEvent,
+  uploadFilesToCloudinary,
+} from "../utils/features.js";
 import {
   ALERT,
   NEW_ATTACHMENT,
+  NEW_MESSAGE,
   NEW_MESSAGE_ALERT,
   REFETCH_CHATS,
 } from "../constants/events.js";
@@ -49,8 +54,8 @@ const getMyChats = TryCatch(async (req, res, next) => {
       groupChat,
       avatar: groupChat
         ? members.slice(0, 3).map(({ avatar }) => avatar.url)
-        : [otherMember.avatar.url],
-      name: groupChat ? name : otherMember.name,
+        : [otherMember[0].avatar.url],
+      name: groupChat ? name : otherMember[0].name,
       members: members.reduce((prev, curr) => {
         if (curr._id.toString() !== req.user.toString()) {
           prev.push(curr._id);
@@ -209,18 +214,8 @@ const sendAttachments = TryCatch(async (req, res, next) => {
   ]);
   if (!chat) return next(new ErrorHandler("Chat not found", 404));
 
-  // TODO: upload files here
+  const attachments = await uploadFilesToCloudinary(files);
 
-  const attachments = [
-    // {
-    //     public_id: "edf",
-    //     url: req.files[0].path,
-    // },
-    // {
-    //     public_id: "edf",
-    //     url: req.files[1].path,
-    // }
-  ];
   const messageForDB = {
     content: "",
     attachments,
@@ -237,7 +232,7 @@ const sendAttachments = TryCatch(async (req, res, next) => {
 
   const message = await Message.create(messageForDB);
 
-  emitEvent(req, NEW_ATTACHMENT, chat.members, {
+  emitEvent(req, NEW_MESSAGE, chat.members, {
     message: messageForRealTime,
     chatId,
   });
@@ -336,7 +331,7 @@ const deleteChat = TryCatch(async (req, res, next) => {
 
 const getMessages = TryCatch(async (req, res, next) => {
   const chatId = req.params.id;
-  const { page = 1 } = req.query.page;
+  const { page = 1 } = req.query;
   const limit = 20;
   const skip = (page - 1) * limit;
 
@@ -353,7 +348,7 @@ const getMessages = TryCatch(async (req, res, next) => {
   const totalPages = Math.ceil(totalMessagesCount / limit);
   res.status(200).json({
     success: true,
-    messages: messages,
+    messages: messages.reverse(),
     totalPages,
   });
 });

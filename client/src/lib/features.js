@@ -26,7 +26,10 @@ const fileformat = (url = "") => {
     return format;
 };
 
-const transformImage = (url = "", width = 100) => url
+// https://res.cloudinary.com/demo/w_512,dpr_auto/bike.jpg
+
+const transformImage = (url = "", width = 100) =>
+    url.replace("upload/", `upload/w_${width},dpr_auto/`);
 
 const getLastSevenDays = () => {
     const currDate = moment();

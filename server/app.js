@@ -6,6 +6,8 @@ import cookieParser from "cookie-parser";
 import { Server } from "socket.io";
 import http from "http";
 import { v4 as uuid } from "uuid";
+import cors from "cors";
+import { v2 as cloudinary } from "cloudinary";
 
 import UserRoute from "./routes/user.js";
 import ChatRoute from "./routes/chat.js";
@@ -14,6 +16,8 @@ import { NEW_MESSAGE, NEW_MESSAGE_ALERT } from "./constants/events.js";
 import { getSockets } from "./lib/helper.js";
 import user from "./routes/user.js";
 import { Message } from "./models/message.js";
+import { corsOptions } from "./constants/config.js";
+import { socketAuthenticator } from "./middlewares/auth.js";
 
 dotenv.config({
   path: "./.env",
@@ -26,11 +30,36 @@ export const adminSecretKey =
   process.env.ADMIN_SECRET_KEY || "amsadsfghterweqwdefgrth";
 export const userSocketIDs = new Map();
 
+[
+  "SIGINT",
+  "SIGTERM",
+  "exit",
+  "SIGUSR1",
+  "SIGUSR2",
+  "uncaughtException",
+].forEach((event) => {
+  process.on(event, (err) => {
+    console.log(`${event} signal received: closing HTTP server, cause: ${err}`);
+    process.exit(1);
+  });
+});
+
 connectDB(mongoURI);
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {});
+const io = new Server(server, {
+  cors: corsOptions,
+});
+
+app.set("io", io);
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -38,23 +67,23 @@ app.get("/", (req, res) => {
   res.send("Server is healthy");
 });
 
-app.use("/user", UserRoute);
-app.use("/chat", ChatRoute);
-app.use("/admin", AdminRoute);
+app.use("/api/v1/user", UserRoute);
+app.use("/api/v1/chat", ChatRoute);
+app.use("/api/v1/admin", AdminRoute);
 
 io.use((socket, next) => {
-  next();
+  cookieParser()(socket.request, socket.request.res, async (err) => {
+    await socketAuthenticator(err, socket, next);
+  });
 });
 
 io.on("connection", (socket) => {
+  const user = socket.user;
   console.log("User connected", socket.id);
 
+  userSocketIDs.set(user._id.toString(), socket.id);
+
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
-    const user = {
-      _id: ".id",
-      name: "dsfghterweqwdefgrth",
-    };
-    userSocketIDs.set(user._id.toString(), socket.id);
     const messageForRealTime = {
       content: message,
       _id: uuid(),
