@@ -18,7 +18,7 @@ const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const Dashboard = lazy(() => import("./pages/admin/Dashboard"));
 const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
 const ChatManagement = lazy(() => import("./pages/admin/ChatManagement"));
-const MessageManagement = lazy(() => import("./pages/admin/MessageMenagement"));
+const MessageManagement = lazy(() => import("./pages/admin/MessageManagement.jsx"));
 
 function App() {
     const {user, loader} = useSelector((state) => state.auth);
@@ -26,9 +26,7 @@ function App() {
     useEffect(() => {
         axios.get(`${server}/user/me`, {withCredentials: true})
             .then(({data}) => dispatch(userExists(data.user)))
-            .catch(() => {
-                dispatch(userNotExists())
-            });
+            .catch(() => dispatch(userNotExists()));
     }, [dispatch]);
 
     return loader ? <LayoutLoader/> : (

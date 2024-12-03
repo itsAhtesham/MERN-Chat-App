@@ -1,4 +1,3 @@
-import React from "react";
 import { Line, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -59,7 +58,7 @@ const LineChart = ({ value = [] }) => {
     datasets: [
       {
         data: value,
-        label: "Revenue",
+        label: "Messages",
         fill: true,
         backgroundColor: purpleLite,
         borderColor: purple,
@@ -76,7 +75,7 @@ const doughnutChartOptions = {
       display: false,
     },
     title: {
-      diaply: false,
+      display: false,
     },
   },
   cutout: 120,

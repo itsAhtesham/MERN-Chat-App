@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import AdminLayout from "../../components/layout/AdminLayout";
 import Table from "../../components/shared/Table";
-import { Avatar } from "@mui/material";
-import { dashboardData } from "../../constants/sampleData";
-import { transformImage } from "../../lib/features";
+import {Avatar, Skeleton} from "@mui/material";
+import {transformImage} from "../../lib/features";
+import {useAdminUsersQuery} from "../../redux/api/api.js";
+import {useErrors} from "../../hooks/hook.jsx";
 
 const columns = [
   {
     field: "id",
     headerName: "ID",
     headerClassName: "table-header",
-    width: 200,
+    width: 210,
   },
   {
     field: "avatar",
@@ -48,21 +49,30 @@ const columns = [
 ];
 
 const UserManagement = () => {
+
+  const {data, error, isError, isLoading}= useAdminUsersQuery();
+
+  useErrors([{isError, error}]);
+
   const [rows, setRows] = useState([]);
 
   useEffect(() => {
-    setRows(
-      dashboardData.users.map((i) => ({
-        ...i,
-        id: i._id,
-        avatar: transformImage(i.avatar, 50),
-      }))
-    );
-  }, []);
+    if (data) {
+      setRows(
+          data.users.map((i) => ({
+            ...i,
+            id: i._id,
+            avatar: transformImage(i.avatar, 50),
+          }))
+      );
+    }
+  }, [data]);
 
   return (
     <AdminLayout>
-      <Table heading={"All Users"} columns={columns} rows={rows} />
+      {
+        isLoading ? <Skeleton height={"100vh"}/> : <Table heading={"All Users"} columns={columns} rows={rows} />
+      }
     </AdminLayout>
   );
 };

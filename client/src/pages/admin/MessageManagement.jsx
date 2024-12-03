@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, {useEffect, useState} from "react";
 import AdminLayout from "../../components/layout/AdminLayout";
 import Table from "../../components/shared/Table";
-import { dashboardData } from "../../constants/sampleData";
-import { Avatar, Box, Stack } from "@mui/material";
-import { fileformat, transformImage } from "../../lib/features";
+import {Avatar, Box, Skeleton, Stack} from "@mui/material";
+import {fileformat, transformImage} from "../../lib/features";
 import moment from "moment";
 import RenderAttachment from "../../components/shared/RenderAttachment";
+import {useAdminMessagesQuery} from "../../redux/api/api.js";
+import {useErrors} from "../../hooks/hook.jsx";
 
 const columns = [
   {
@@ -87,33 +88,43 @@ const columns = [
   },
 ];
 
-const MessageMenagement = () => {
-  const [rows, setRows] = useState([]);
+const MessageManagement = () => {
+
+    const {data, error, isError, isLoading}= useAdminMessagesQuery();
+
+    useErrors([{isError, error}]);
+
+    const [rows, setRows] = useState([]);
 
   useEffect(() => {
-    setRows(
-      dashboardData.messages.map((i) => ({
-        ...i,
-        id: i._id,
-        sender: {
-          name: i.sender.name,
-          avatar: transformImage(i.sender.avatar, 50),
-        },
-        createdAt: moment(i.createdAt).format("MMMM Do YYYY, h:mm:ss a"),
-      }))
-    );
-  }, []);
+    if (data) {
+        setRows(
+            data.message.map((i) => ({
+                ...i,
+                id: i._id,
+                sender: {
+                    name: i.sender.name,
+                    avatar: transformImage(i.sender.avatar, 50),
+                },
+                createdAt: moment(i.createdAt).format("MMMM Do YYYY, h:mm:ss a"),
+            }))
+        );
+    }
+  }, [data]);
 
   return (
     <AdminLayout>
-      <Table
-        heading={"All Messages"}
-        columns={columns}
-        rows={rows}
-        rowHeight={200}
-      />
+        {
+            isLoading ? <Skeleton height={"100vh"}/> :
+                <Table
+                heading={"All Messages"}
+                columns={columns}
+                rows={rows}
+                rowHeight={200}
+            />
+        }
     </AdminLayout>
   );
 };
 
-export default MessageMenagement;
+export default MessageManagement;

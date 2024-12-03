@@ -12,9 +12,16 @@ import { v2 as cloudinary } from "cloudinary";
 import UserRoute from "./routes/user.js";
 import ChatRoute from "./routes/chat.js";
 import AdminRoute from "./routes/admin.js";
-import { NEW_MESSAGE, NEW_MESSAGE_ALERT } from "./constants/events.js";
+import {
+  CHAT_JOINED,
+  CHAT_LEAVED,
+  NEW_MESSAGE,
+  NEW_MESSAGE_ALERT,
+  ONLINE_USERS,
+  START_TYPING,
+  STOP_TYPING,
+} from "./constants/events.js";
 import { getSockets } from "./lib/helper.js";
-import user from "./routes/user.js";
 import { Message } from "./models/message.js";
 import { corsOptions } from "./constants/config.js";
 import { socketAuthenticator } from "./middlewares/auth.js";
@@ -29,6 +36,7 @@ export const envMode = process.env.NODE_ENV.trim() || "PRODUCTION";
 export const adminSecretKey =
   process.env.ADMIN_SECRET_KEY || "amsadsfghterweqwdefgrth";
 export const userSocketIDs = new Map();
+export const onlineUsers = new Set();
 
 [
   "SIGINT",
@@ -79,7 +87,6 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   const user = socket.user;
-  console.log("User connected", socket.id);
 
   userSocketIDs.set(user._id.toString(), socket.id);
 
@@ -111,15 +118,36 @@ io.on("connection", (socket) => {
     try {
       await Message.create(messageForDB);
     } catch (e) {
-      console.log(e);
+      throw new Error(e);
     }
+  });
 
-    console.log("NEW_MESSAGE", messageForRealTime);
+  socket.on(START_TYPING, ({ members, chatId }) => {
+    const membersSockets = getSockets(members);
+    socket.to(membersSockets).emit(START_TYPING, { chatId });
+  });
+
+  socket.on(STOP_TYPING, ({ members, chatId }) => {
+    const membersSockets = getSockets(members);
+    socket.to(membersSockets).emit(STOP_TYPING, { chatId });
+  });
+
+  socket.on(CHAT_JOINED, ({ userId, members }) => {
+    onlineUsers.add(userId.toString());
+    const membersSockets = getSockets(members);
+    io.to(membersSockets).emit(ONLINE_USERS, Array.from(onlineUsers));
+  });
+
+  socket.on(CHAT_LEAVED, ({ members, userId }) => {
+    onlineUsers.delete(userId.toString());
+    const membersSockets = getSockets(members);
+    io.to(membersSockets).emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 
   socket.on("disconnect", () => {
     userSocketIDs.delete(user._id.toString());
-    console.log("user disconnected", socket.id);
+    onlineUsers.delete(user._id.toString());
+    socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 });
 

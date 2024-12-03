@@ -23,7 +23,8 @@ import {server} from "../../constants/config.js"
 import {userNotExists} from "../../redux/reducers/auth.js";
 import toast from "react-hot-toast";
 import {useDispatch, useSelector} from "react-redux";
-import {setIsMobile, setIsNotification, setIsSearch} from "../../redux/reducers/misc.js";
+import {setIsMobile, setIsNewGroup, setIsNotification, setIsSearch} from "../../redux/reducers/misc.js";
+import {resetNotificationCount} from "../../redux/reducers/chat.js";
 
 const SearchDialog = lazy(() => import("../specific/Search"));
 const NotificationDialog = lazy(() => import("../specific/Notifications"));
@@ -33,31 +34,34 @@ function Header() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const {isSearch, isNotification} = useSelector((state) => state.misc)
+  const {isSearch, isNotification, isNewGroup} = useSelector((state) => state.misc)
   const {notificationCount} = useSelector((state) => state.chat)
 
-  const [isNewGroup, setIsNewGroup] = useState(false);
-  // const [isNotification, setIsNotification] = useState(false);
+  // const [isNewGroup, setIsNewGroup] = useState(false);
 
   const handleMobile = () => dispatch(setIsMobile(true));
   const openSearch = () => dispatch(setIsSearch(true));
 
   const openNewGroup = () => {
-    setIsNewGroup((p) => !p);
+    dispatch(setIsNewGroup(true))
     console.log("openNewGroup");
   };
 
-  const openNotifications = () => dispatch(setIsNotification(true));
+  const openNotifications = () => {
+    dispatch(setIsNotification(true));
+    dispatch(resetNotificationCount());
+  }
 
   const navigateToGroup = () => navigate("/groups");
 
   const logoutHandler = async () => {
+    const toastId = toast.loading("Logging out...")
     try {
       const {data} = await axios.get(`${server}/user/logout`, { withCredentials: true });
       dispatch(userNotExists());
-      toast.success(data.message);
+      toast.success(data.message, {id: toastId});
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Something went wrong");
+      toast.error(e?.response?.data?.message || "Something went wrong", {id: toastId});
     }
   };
 
